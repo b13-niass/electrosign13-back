@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: electrosign13-back
+    version: v1.0.0
+  datasource:
+    url: jdbc:postgresql://localhost:8126/electrosign
+    username: amigoscode
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8090/realms/electrosign
+
+eureka:
+  client:
+    registerWithEureka: false
+    fetchRegistry: false
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+
+server:
+  port: 8200
+  servlet:
+    context-path: /api/v1
+
+keycloak:
+  realm: electrosign
+  auth-server-url: http://localhost:8090
+  use-resource-role-mappings: true
+  bearer-only: true
+  client-id: electrosign-client
+  client-secret: WFNhWhii6mt1rf4Xu8o5Nj4Gm4E4GNYf
