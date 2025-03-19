@@ -18,7 +18,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.Collection;
 import java.util.List;
 
 @Configuration
@@ -53,10 +52,10 @@ public class KeycloakSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/public/**",
+                                "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
-                                "/v3/api-docs/**",
                                 "/webjars/**"
                         ).permitAll()
                         .anyRequest().authenticated()

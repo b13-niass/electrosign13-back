@@ -2,9 +2,8 @@ package com.codev13.electrosign13back.web.dto.request;
 
 import com.codev13.electrosign13back.data.entity.Annee;
 import com.codev13.electrosign13back.data.entity.Filiale;
-import com.core.communs.validator.annotation.Exists;
-import com.core.communs.validator.annotation.ExistsList;
-import com.core.communs.validator.annotation.Unique;
+import com.codev13.electrosign13back.validator.annotation.ExistsList;
+import com.codev13.electrosign13back.validator.annotation.Unique;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 

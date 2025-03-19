@@ -2,6 +2,7 @@ package com.codev13.electrosign13back.data.entity;
 
 import com.core.communs.core.GenericEntity;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,16 +25,22 @@ public class User extends AbstractEntity implements GenericEntity<User> {
     private String prenom;
     private String nom;
     private String email;
+    @Column(nullable = true)
     private String password;
+    @Column(columnDefinition = "TEXT")
     private String photo;
     private String telephone;
     private String cni;
+    @Column(columnDefinition = "TEXT")
     private String privateKey;
+    @Column(columnDefinition = "TEXT")
     private String publicKey;
+    @Column(nullable = true)
     private String mySignature;
 
     @ManyToOne
     @JoinColumn(name = "fonction_id")
+    @JsonIgnore
     private Fonction fonction;
 
     @OneToMany(mappedBy = "user")

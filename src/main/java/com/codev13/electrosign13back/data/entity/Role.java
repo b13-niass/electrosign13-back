@@ -16,6 +16,7 @@ import java.util.List;
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Table(name = "roles")
 public class Role extends AbstractEntity implements GenericEntity<Role>{
+    @Column(unique = true, nullable = false)
     private String libelle;
 
     @ManyToMany(mappedBy = "roles")

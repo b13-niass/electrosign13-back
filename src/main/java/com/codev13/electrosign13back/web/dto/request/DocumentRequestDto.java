@@ -2,7 +2,7 @@ package com.codev13.electrosign13back.web.dto.request;
 
 import com.codev13.electrosign13back.data.entity.Demande;
 import com.codev13.electrosign13back.enums.EtatDocument;
-import com.core.communs.validator.annotation.Exists;
+import com.codev13.electrosign13back.validator.annotation.Exists;
 import jakarta.validation.constraints.NotNull;
 
 public record DocumentRequestDto(

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -40,6 +41,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex.getStatus(), ex.getMessage());
     }
 
+    @ExceptionHandler(FeignException.Unauthorized.class)
+    public ResponseEntity<Map<String, Object>> handleFeignUnauthorizedException(FeignException.Unauthorized ex) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Échec de l'authentification. Vérifiez vos identifiants.");
+    }
+
     @ExceptionHandler(FeignException.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(FeignException ex) {
        try {
@@ -52,10 +58,14 @@ public class GlobalExceptionHandler {
        }
     }
 
-//    @ExceptionHandler(ValidationException.class)
-//    public ResponseEntity<Map<String, Object>> handleUserExceptions(ValidationException ex) {
-//        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
-//    }
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleUserExceptions(ValidationException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxSizeException(MaxUploadSizeExceededException exc) {
+        return  buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Fichier trop volumineux. Taille maximale autorisée: 10MB.");
+    }
 
 //    @ExceptionHandler(Exception.class)
 //    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {

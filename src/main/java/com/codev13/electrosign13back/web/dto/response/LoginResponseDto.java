@@ -1,6 +1,8 @@
 package com.codev13.electrosign13back.web.dto.response;
 
+import com.codev13.electrosign13back.data.entity.User;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +27,6 @@ public class LoginResponseDto {
 
     @JsonProperty("token_type")
     private String tokenType;
+    @Nullable
+    private UserLoginResponseDto user;
 }

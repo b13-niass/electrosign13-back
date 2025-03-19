@@ -2,8 +2,8 @@ package com.codev13.electrosign13back.web.dto.request;
 
 import com.codev13.electrosign13back.data.entity.Departement;
 import com.codev13.electrosign13back.data.entity.Filiale;
-import com.core.communs.validator.annotation.ExistsList;
-import com.core.communs.validator.annotation.Unique;
+import com.codev13.electrosign13back.validator.annotation.ExistsList;
+import com.codev13.electrosign13back.validator.annotation.Unique;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;

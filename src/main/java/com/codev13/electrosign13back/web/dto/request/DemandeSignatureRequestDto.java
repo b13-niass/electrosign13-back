@@ -2,7 +2,7 @@ package com.codev13.electrosign13back.web.dto.request;
 
 import com.codev13.electrosign13back.data.entity.Demande;
 import com.codev13.electrosign13back.data.entity.User;
-import com.core.communs.validator.annotation.Exists;
+import com.codev13.electrosign13back.validator.annotation.Exists;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
