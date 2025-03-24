@@ -4,6 +4,7 @@ import com.codev13.electrosign13back.data.entity.Fonction;
 import com.codev13.electrosign13back.data.entity.Role;
 import lombok.*;
 
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -22,4 +23,5 @@ public class UserResponseDto {
     private String mySignature;
     private Fonction fonction;
     private Set<Role> roles;
+    private List<String> rolesLibelle;
 }

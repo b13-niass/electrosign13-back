@@ -45,8 +45,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .build();
 
         LoginResponseDto loginResponseDto = keycloakClient.getAccessToken(keycloakAuthRequest);
+        var fonctionLibelle = user.getFonction().getLibelle();
+        user.setFonction(null);
         UserLoginResponseDto userResponseDto = MapperService.mapToEntity(user, UserLoginResponseDto.class);
-        userResponseDto.setFonction(user.getFonction().getLibelle());
+        userResponseDto.setFonction(fonctionLibelle);
         userResponseDto.setRolesLibelle(user.getRoles().stream().map(Role::getLibelle).collect(Collectors.toList()));
         loginResponseDto.setUser(userResponseDto);
         return loginResponseDto;
@@ -60,7 +62,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .client_secret(keycloakProperties.getClientSecret())
                 .grant_type("refresh_token")
                 .build();
-
         return keycloakClient.getAccessToken(keycloakAuthRequest);
     }
 

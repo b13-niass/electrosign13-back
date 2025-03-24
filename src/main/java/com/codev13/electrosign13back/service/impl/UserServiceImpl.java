@@ -15,6 +15,7 @@ import com.codev13.electrosign13back.service.UserService;
 import com.codev13.electrosign13back.utils.AESUtil;
 import com.codev13.electrosign13back.utils.KeyGeneratorUtil;
 import com.codev13.electrosign13back.web.dto.request.UserRequestDto;
+import com.codev13.electrosign13back.web.dto.response.UserLoginResponseDto;
 import com.codev13.electrosign13back.web.dto.response.UserResponseDto;
 import com.core.communs.service.MapperService;
 import feign.FeignException;
@@ -44,7 +45,7 @@ public class UserServiceImpl implements UserService {
     @Value("${keySecret}")
     private String SECRET;
 
-    private final FileStorageService fileStorageService;
+//    private final FileStorageService fileStorageService;
 
     @Transactional
     public UserResponseDto createUser(UserRequestDto request) {
@@ -111,6 +112,24 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+    public List<UserResponseDto> getAllUsers(
+            String roles,
+            String status) {
+
+        List<User> users = userRepository.findAll();
+        if (roles != null){
+            users = users.stream().filter(user -> user.getRoles().stream().anyMatch(role -> role.getLibelle().equals(roles)))
+                   .toList();
+        }
+        if (status!= null && status.equals("deactivate")){
+            users = users.stream().filter(user -> !user.isActive())
+                   .toList();
+        }
+
+        return MapperService.mapToListEntity(users, UserResponseDto.class);
     }
 
 }

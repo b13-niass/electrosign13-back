@@ -1,5 +1,6 @@
 package com.codev13.electrosign13back.data.entity;
 
+import com.codev13.electrosign13back.enums.DemandeSignatureActions;
 import com.core.communs.core.GenericEntity;
 
 import com.core.communs.core.GenericEntity;
@@ -17,8 +18,8 @@ import lombok.*;
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Table(name = "demande_signature")
 public class DemandeSignature extends AbstractEntity implements GenericEntity<DemandeSignature> {
-
-    private String action;
+    @Enumerated(EnumType.STRING)
+    private DemandeSignatureActions action;
     private int ordre;
     private int detenant;
 

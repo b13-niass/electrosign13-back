@@ -40,12 +40,10 @@ public class User extends AbstractEntity implements GenericEntity<User> {
 
     @ManyToOne
     @JoinColumn(name = "fonction_id")
-    @JsonIgnore
     private Fonction fonction;
 
     @OneToMany(mappedBy = "user")
     private List<Notification> notifications;
-
     @ManyToMany
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),

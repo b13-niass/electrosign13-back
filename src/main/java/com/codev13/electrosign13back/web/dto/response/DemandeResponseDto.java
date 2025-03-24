@@ -1,5 +1,6 @@
 package com.codev13.electrosign13back.web.dto.response;
 
+import com.codev13.electrosign13back.enums.PriorityDemande;
 import com.codev13.electrosign13back.enums.StatusDemande;
 import lombok.*;
 
@@ -21,6 +22,7 @@ public class DemandeResponseDto {
     private int currentApprobation;
     private int currentSignature;
     private StatusDemande status;
+    private PriorityDemande priority;
     private List<DemandeSignatureResponseDto> demandeSignatures;
     private List<DocumentResponseDto> documents;
 }

@@ -17,9 +17,9 @@ public class LocalFileStorageService implements FileStorageService {
     private String localPath;
 
     @Override
-    public String uploadFile(MultipartFile file) throws IOException {
+    public String uploadFile(MultipartFile file, String folder) throws IOException {
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        File destination = new File(localPath + File.separator + fileName);
+        File destination = new File(localPath + File.separator  + folder + File.separator + fileName);
 
         // Créer le dossier s'il n'existe pas
         destination.getParentFile().mkdirs();

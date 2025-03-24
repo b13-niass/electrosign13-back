@@ -1,4 +1,5 @@
 package com.codev13.electrosign13back.data.entity;
+import com.codev13.electrosign13back.enums.PriorityDemande;
 import com.codev13.electrosign13back.enums.StatusDemande;
 import com.core.communs.core.GenericEntity;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
@@ -6,6 +7,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -20,11 +22,15 @@ import java.util.List;
 public class Demande extends AbstractEntity implements GenericEntity<Demande>  {
     private String titre;
     private String description;
-    private Date dateLimite;
+    private LocalDate dateLimite;
+    @Enumerated(EnumType.STRING)
+    private PriorityDemande priority;
     private int nombreApprobation;
     private int nombreSignature;
+    private int nombreAmpliateur;
     private int currentApprobation;
     private int currentSignature;
+    private int currentAmpliateur;
 
     @Enumerated(EnumType.STRING)
     private StatusDemande status;

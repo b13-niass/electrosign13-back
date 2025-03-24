@@ -22,6 +22,8 @@ public class Notification extends AbstractEntity implements GenericEntity<Notifi
     @Enumerated(EnumType.STRING)
     private TypeNotification type;
 
+    private String link;
+
     @Enumerated(EnumType.STRING)
     private StatusNotification status;
 

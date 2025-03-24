@@ -1,6 +1,7 @@
 package com.codev13.electrosign13back.data.entity;
 
 import com.codev13.electrosign13back.enums.EtatDocument;
+import com.codev13.electrosign13back.enums.TypeDocument;
 import com.core.communs.core.GenericEntity;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
@@ -20,8 +21,14 @@ import java.util.List;
 @SQLDelete(sql = "UPDATE documents SET etat = 'ARCHIVE' WHERE id=?")
 public class Document extends AbstractEntity implements GenericEntity<Document> {
     private String nom;
+    @Column(columnDefinition = "TEXT")
     private String contenu;
-
+    @Column(nullable = true)
+    private String linkLocal;
+    @Column(nullable = true)
+    private String linkCloud;
+    @Enumerated(EnumType.STRING)
+    private TypeDocument type;
     @Enumerated(EnumType.STRING)
     private EtatDocument etatDocument;
 

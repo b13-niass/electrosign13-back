@@ -8,12 +8,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class FileStorageConfig {
 
-    @Bean
-    public FileStorageService fileStorageService(
-            @Value("${storage.type}") String storageType,
-            FileStorageService localStorageService,
-            FileStorageService cloudStorageService) {
-
-        return "cloud".equalsIgnoreCase(storageType) ? cloudStorageService : localStorageService;
-    }
+//    @Bean
+//    public FileStorageService fileStorageService(
+//            @Value("${storage.type}") String storageType,
+//            FileStorageService localStorageService,
+//            FileStorageService cloudStorageService) {
+//
+//        return "cloud".equalsIgnoreCase(storageType) ? cloudStorageService : localStorageService;
+//    }
 }

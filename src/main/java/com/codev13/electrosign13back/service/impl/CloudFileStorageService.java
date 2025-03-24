@@ -17,7 +17,7 @@ public class CloudFileStorageService implements FileStorageService {
     private String cloudBucket;
 
     @Override
-    public String uploadFile(MultipartFile file) throws IOException {
+    public String uploadFile(MultipartFile file, String folder) throws IOException {
         return "Fichier uploadé sur " + cloudProvider + " dans le bucket: " + cloudBucket;
     }
 }
