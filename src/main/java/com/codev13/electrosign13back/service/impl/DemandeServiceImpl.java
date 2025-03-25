@@ -46,6 +46,7 @@ public class DemandeServiceImpl implements DemandeService {
             User sender = userRepository.findByEmail(tokenProvider.getEmailFromToken()).orElseThrow(
                     () -> new UserNotFoundException("Demandeur inexistant")
             );
+            int i = 0;
                 // Save demande
                 Demande demande = repository.save(Demande.builder()
                                 .titre(request.titre())
@@ -60,6 +61,21 @@ public class DemandeServiceImpl implements DemandeService {
                                 .currentSignature(0)
                                 .currentAmpliateur(0)
                                 .build());
+
+                // Save approbateurs
+                if (request.approbateurs() != null) {
+                    for(UserDemandeRequestDto approbateur : request.approbateurs()){
+                        User user = userRepository.findById(approbateur.id()).orElseThrow(() -> new UserNotFoundException("Approbateur inexistant"));
+                        demandeSignatureRepository.save(DemandeSignature.builder()
+                                .demande(demande)
+                                .sender(sender)
+                                .receiver(user)
+                                .action(DemandeSignatureActions.APPROUVER)
+                                .ordre(++i)
+                                .detenant(0)
+                                .build());
+                    }
+                }
                 // Save Signataires
                 for(UserDemandeRequestDto signataire : request.signataires()){
                     User user = userRepository.findById(signataire.id()).orElseThrow(() -> new UserNotFoundException("Signataire inexistant"));
@@ -68,24 +84,11 @@ public class DemandeServiceImpl implements DemandeService {
                                     .sender(sender)
                                     .receiver(user)
                                     .action(DemandeSignatureActions.SIGNER)
-                                    .ordre(1)
+                                    .ordre(++i)
                                     .detenant(0)
                                     .build());
                 }
-                // Save approbateurs
-            if (request.approbateurs() != null) {
-                for(UserDemandeRequestDto approbateur : request.approbateurs()){
-                    User user = userRepository.findById(approbateur.id()).orElseThrow(() -> new UserNotFoundException("Approbateur inexistant"));
-                    demandeSignatureRepository.save(DemandeSignature.builder()
-                                    .demande(demande)
-                                    .sender(sender)
-                                    .receiver(user)
-                                    .action(DemandeSignatureActions.APPROUVER)
-                                    .ordre(2)
-                                    .detenant(0)
-                                    .build());
-                }
-            }
+
                 // Save ampliateurs
             if (request.ampliateurs() != null) {
                 for (UserDemandeRequestDto ampliateur : request.ampliateurs()) {
@@ -140,4 +143,34 @@ public class DemandeServiceImpl implements DemandeService {
             throw new DemandeInternalServerException(e.getMessage());
         }
     }
+
+    @Override
+    public List<Object> getSentDemande() {
+        try{
+            User sender = userRepository.findByEmail(tokenProvider.getEmailFromToken()).orElseThrow(
+                    () -> new UserNotFoundException("Demandeur inexistant")
+            );
+
+
+        }catch (Exception e){
+
+        }
+        return List.of();
+    }
+
+    @Override
+    public List<Object> getReceiveDemande() {
+        try{
+            User receiver = userRepository.findByEmail(tokenProvider.getEmailFromToken()).orElseThrow(
+                    () -> new UserNotFoundException("Demandeur inexistant")
+            );
+
+
+        }catch (Exception e){
+
+        }
+        return List.of();
+    }
+
+
 }
