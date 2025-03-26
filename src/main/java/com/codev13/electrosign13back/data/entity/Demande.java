@@ -31,7 +31,8 @@ public class Demande extends AbstractEntity implements GenericEntity<Demande>  {
     private int currentApprobation;
     private int currentSignature;
     private int currentAmpliateur;
-
+    private long initSize;
+    private long updateSize;
     @Enumerated(EnumType.STRING)
     private StatusDemande status;
 

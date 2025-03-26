@@ -11,6 +11,9 @@ public record UserDemandeRequestDto(
         Long id,
         @NotNull
         @NotEmpty
-        String action
+        String action,
+        @NotNull
+        @NotEmpty
+        int ordre
 ) {
 }
