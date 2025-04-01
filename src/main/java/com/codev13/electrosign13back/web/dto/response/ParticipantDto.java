@@ -19,5 +19,6 @@ public class ParticipantDto {
     private boolean isCurrentSigner;
     private int ordre;
     private String action;
+    private String signature = null;
 }
 

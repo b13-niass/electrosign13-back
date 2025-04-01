@@ -13,6 +13,8 @@ import com.codev13.electrosign13back.enums.EtatDocument;
 import com.codev13.electrosign13back.enums.StatusDemande;
 import com.codev13.electrosign13back.enums.TypeDocument;
 import com.codev13.electrosign13back.exception.demande.DemandeInternalServerException;
+import com.codev13.electrosign13back.exception.demande.DemandeNotFoundException;
+import com.codev13.electrosign13back.exception.document.DocumentNotFoundException;
 import com.codev13.electrosign13back.exception.user.UserNotFoundException;
 import com.codev13.electrosign13back.service.DemandeService;
 import com.codev13.electrosign13back.service.TokenProvider;
@@ -195,6 +197,180 @@ public class DemandeServiceImpl implements DemandeService {
     }
 
     /**
+     * Approuve une demande et passe au signataire suivant si tous les approbateurs ont approuvé
+     */
+    @Transactional
+    public void approuverDemande(Long demandeId, Long userId) {
+        Demande demande = repository.findById(demandeId)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+
+        // Vérifier que l'utilisateur est bien l'approbateur actuel
+        DemandeSignature approbation = demandeSignatureRepository.findByDemandeIdAndReceiverIdAndAction(
+                        demandeId, userId, DemandeSignatureActions.APPROUVER)
+                .orElseThrow(() -> new RuntimeException("Vous n'êtes pas autorisé à approuver cette demande"));
+
+        if (approbation.getDetenant() != 1) {
+            throw new RuntimeException("Ce n'est pas votre tour d'approuver cette demande");
+        }
+
+        // Marquer l'approbation comme effectuée
+        approbation.setDetenant(2); // 2 = approuvé
+        demandeSignatureRepository.save(approbation);
+
+        // Mettre à jour le compteur d'approbation
+        demande.setCurrentApprobation(demande.getCurrentApprobation() + 1);
+
+        // Vérifier si tous les approbateurs ont approuvé
+        if (demande.getCurrentApprobation() >= demande.getNombreApprobation()) {
+            // Passer au premier signataire
+            List<DemandeSignature> signataires = demandeSignatureRepository.findByDemandeIdAndActionOrderByOrdre(
+                    demandeId, DemandeSignatureActions.SIGNER);
+
+            if (!signataires.isEmpty()) {
+                DemandeSignature premierSignataire = signataires.get(0);
+                premierSignataire.setDetenant(1); // 1 = en attente de signature
+                demandeSignatureRepository.save(premierSignataire);
+
+                // Mettre à jour le statut de la demande
+                demande.setStatus(StatusDemande.EN_ATTENTE_SIGNATURE);
+            } else {
+                // Pas de signataires, la demande est considérée comme approuvée
+                demande.setStatus(StatusDemande.APPROUVEE);
+            }
+        }
+
+        repository.save(demande);
+    }
+
+    /**
+     * Signe une demande et passe au signataire suivant
+     */
+    @Transactional
+    public void signerDemande(Long demandeId, Long userId) {
+        Demande demande = repository.findById(demandeId)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+
+        // Vérifier que l'utilisateur est bien le signataire actuel
+        DemandeSignature signature = demandeSignatureRepository.findByDemandeIdAndReceiverIdAndAction(
+                        demandeId, userId, DemandeSignatureActions.SIGNER)
+                .orElseThrow(() -> new RuntimeException("Vous n'êtes pas autorisé à signer cette demande"));
+
+        if (signature.getDetenant() != 1) {
+            throw new RuntimeException("Ce n'est pas votre tour de signer cette demande");
+        }
+
+        // Marquer la signature comme effectuée
+        signature.setDetenant(2); // 2 = signé
+        demandeSignatureRepository.save(signature);
+
+        // Mettre à jour le compteur de signature
+        demande.setCurrentSignature(demande.getCurrentSignature() + 1);
+
+        // Vérifier s'il y a un signataire suivant
+        if (demande.getCurrentSignature() < demande.getNombreSignature()) {
+            // Trouver le prochain signataire
+            List<DemandeSignature> signataires = demandeSignatureRepository.findByDemandeIdAndActionOrderByOrdre(
+                    demandeId, DemandeSignatureActions.SIGNER);
+
+            Optional<DemandeSignature> prochainSignataire = signataires.stream()
+                    .filter(s -> s.getDetenant() == 0) // 0 = pas encore signé
+                    .min(Comparator.comparing(DemandeSignature::getOrdre));
+
+            if (prochainSignataire.isPresent()) {
+                prochainSignataire.get().setDetenant(1); // 1 = en attente de signature
+                demandeSignatureRepository.save(prochainSignataire.get());
+            }
+        } else {
+            // Tous les signataires ont signé, la demande est signée
+            demande.setStatus(StatusDemande.SIGNEE);
+
+            // Notifier les ampliateurs si nécessaire
+            if (demande.getNombreAmpliateur() > 0) {
+                List<DemandeSignature> ampliateurs = demandeSignatureRepository.findByDemandeIdAndAction(
+                        demandeId, DemandeSignatureActions.AMPLIER);
+
+                for (DemandeSignature ampliateur : ampliateurs) {
+                    ampliateur.setDetenant(1); // 1 = en attente d'ampliation
+                    demandeSignatureRepository.save(ampliateur);
+                }
+            }
+        }
+
+        repository.save(demande);
+    }
+
+    /**
+     * Refuse une demande (approbateur ou signataire)
+     */
+    @Transactional
+    public void refuserDemande(Long demandeId, Long userId, String motif) {
+        Demande demande = repository.findById(demandeId)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+
+        // Vérifier que l'utilisateur est bien un approbateur ou signataire actuel
+        DemandeSignature participation = demandeSignatureRepository.findByDemandeIdAndReceiverId(demandeId, userId)
+                .orElseThrow(() -> new RuntimeException("Vous n'êtes pas associé à cette demande"));
+
+        if (participation.getDetenant() != 1) {
+            throw new RuntimeException("Ce n'est pas votre tour d'agir sur cette demande");
+        }
+
+        // Marquer la demande comme refusée
+        demande.setStatus(StatusDemande.REFUSEE);
+        repository.save(demande);
+
+        // Enregistrer le motif de refus (à implémenter selon votre modèle de données)
+        // ...
+    }
+
+    @Override
+    public DemandeResponseListDto getDemandeById(Long demandeId) {
+        User currentUser = userRepository.findByEmail(tokenProvider.getEmailFromToken())
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur non trouvé"));
+
+        Demande demande = repository.findById(demandeId)
+                .orElseThrow(() -> new DemandeNotFoundException("Demande non trouvée avec l'ID: " + demandeId));
+
+        if (!demande.isActive()) {
+            throw new DemandeNotFoundException("Cette demande n'est plus active");
+        }
+
+        return mapToDemandeResponseDto(demande, currentUser);
+    }
+
+    @Override
+    public Document getDocumentByDemandeId(Long demandeId, TypeDocument type) {
+        User currentUser = userRepository.findByEmail(tokenProvider.getEmailFromToken())
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur non trouvé"));
+
+        Demande demande = repository.findById(demandeId)
+                .orElseThrow(() -> new DemandeNotFoundException("Demande non trouvée avec l'ID: " + demandeId));
+
+        if (!demande.isActive()) {
+            throw new DemandeNotFoundException("Cette demande n'est plus active");
+        }
+
+        boolean hasAccess = demandeSignatureRepository.existsBySenderIdOrReceiverIdAndDemandeId(
+                currentUser.getId(), currentUser.getId(), demandeId);
+
+        if (!hasAccess) {
+            throw new RuntimeException("Vous n'avez pas accès à ce document");
+        }
+
+        Optional<Document> document;
+        if (type == null) {
+            document = documentRepository.findFirstByDemandeIdAndTypeAndActiveTrue(
+                    demandeId, TypeDocument.SIGNATURE);
+        } else {
+            document = documentRepository.findFirstByDemandeIdAndTypeAndActiveTrue(
+                    demandeId, type);
+        }
+
+        return document.orElseThrow(() ->
+                new DocumentNotFoundException("Document non trouvé pour la demande avec l'ID: " + demandeId));
+    }
+
+    /**
      * Convertit une entité Demande en DTO avec les informations sur les participants
      */
     private DemandeResponseListDto mapToDemandeResponseDto(Demande demande, User currentUser) {
@@ -254,6 +430,7 @@ public class DemandeServiceImpl implements DemandeService {
                         .build();
 
                 if (signature.getAction() == DemandeSignatureActions.SIGNER) {
+                    participant.setSignature(receiver.getMySignature());
                     signataires.add(participant);
                 } else if (signature.getAction() == DemandeSignatureActions.APPROUVER) {
                     approbateurs.add(participant);
@@ -298,4 +475,5 @@ public class DemandeServiceImpl implements DemandeService {
                 .isCurrentUserApprobateur(isCurrentUserApprobateur)
                 .build();
     }
+
 }

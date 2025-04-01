@@ -28,4 +28,5 @@ public interface DemandeSignatureRepository extends GenericRepository<DemandeSig
     Optional<DemandeSignature> findByDemandeIdAndReceiverIdAndAction(Long demandeId, Long receiverId, DemandeSignatureActions action);
 
     Optional<DemandeSignature> findByDemandeIdAndReceiverId(Long demandeId, Long receiverId);
+    boolean existsBySenderIdOrReceiverIdAndDemandeId(Long senderId, Long receiverId, Long demandeId);
 }
