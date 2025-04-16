@@ -17,7 +17,6 @@ import java.util.Collection;
 public class ExistsListValidator implements ConstraintValidator<ExistsList, Collection<?>> {
 
     private final ApplicationContext applicationContext;
-
     private String field;
     private Class<?> entity;
 
@@ -32,7 +31,6 @@ public class ExistsListValidator implements ConstraintValidator<ExistsList, Coll
         if (values == null || values.isEmpty()) {
             return false;
         }
-
         try {
             String repositoryName = entity.getSimpleName() + "Repository";
             String packageName = entity.getPackage().getName();

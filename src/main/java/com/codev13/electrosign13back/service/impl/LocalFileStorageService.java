@@ -28,6 +28,6 @@ public class LocalFileStorageService implements FileStorageService {
             fos.write(file.getBytes());
         }
 
-        return destination.getAbsolutePath();
+        return folder+"/"+fileName;
     }
 }

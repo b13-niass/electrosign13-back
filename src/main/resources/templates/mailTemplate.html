@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electro-Sign</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 25px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .footer {
+            font-size: 12px;
+            text-align: center;
+            color: #777;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .signature {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <img class="logo" src="cid:logo" alt="Electro-Sign Logo" th:if="${logoExists}"/>
+    <h1>Electro-Sign</h1>
+</div>
+
+<div class="content">
+    <p th:text="${salutation}">Bonjour,</p>
+
+    <div th:if="${messageType == 'nouvelle_demande'}">
+        <p>Vous avez reçu une nouvelle demande de signature de document.</p>
+        <p>Le document "<span th:text="${documentName}">Document</span>" nécessite votre attention.</p>
+        <p>Détails du document :</p>
+        <ul>
+            <li>Expéditeur : <span th:text="${senderName}">Nom de l'expéditeur</span></li>
+            <li>Date d'envoi : <span th:text="${sendDate}">Date d'envoi</span></li>
+            <li>Date limite : <span th:text="${dueDate}">Date limite</span></li>
+        </ul>
+    </div>
+
+    <div th:if="${messageType == 'approbation'}">
+        <p>Une demande d'approbation de document vous a été envoyée.</p>
+        <p>Le document "<span th:text="${documentName}">Document</span>" nécessite votre approbation avant de poursuivre le processus de signature.</p>
+        <p>Détails du document :</p>
+        <ul>
+            <li>Expéditeur : <span th:text="${senderName}">Nom de l'expéditeur</span></li>
+            <li>Date d'envoi : <span th:text="${sendDate}">Date d'envoi</span></li>
+            <li>Date limite : <span th:text="${dueDate}">Date limite</span></li>
+        </ul>
+    </div>
+
+    <div th:if="${messageType == 'signature'}">
+        <p>Vous êtes invité(e) à signer un document.</p>
+        <p>Le document "<span th:text="${documentName}">Document</span>" nécessite votre signature.</p>
+        <p>Détails du document :</p>
+        <ul>
+            <li>Expéditeur : <span th:text="${senderName}">Nom de l'expéditeur</span></li>
+            <li>Date d'envoi : <span th:text="${sendDate}">Date d'envoi</span></li>
+            <li>Date limite : <span th:text="${dueDate}">Date limite</span></li>
+        </ul>
+    </div>
+
+    <p>Veuillez cliquer sur le bouton ci-dessous pour accéder au document :</p>
+
+    <div style="text-align: center;">
+        <a class="button" th:href="${actionUrl}" target="_blank">
+            <span th:if="${messageType == 'nouvelle_demande'}">Voir la demande</span>
+            <span th:if="${messageType == 'approbation'}">Approuver le document</span>
+            <span th:if="${messageType == 'signature'}">Signer le document</span>
+        </a>
+    </div>
+
+    <p>Si le bouton ne fonctionne pas, vous pouvez copier et coller le lien suivant dans votre navigateur :</p>
+    <p th:text="${actionUrl}">https://electro-sign.com/documents/123</p>
+
+    <p>Ce lien expirera dans <span th:text="${expirationTime}">48 heures</span>.</p>
+
+    <div class="signature">
+        <p>Cordialement,</p>
+        <p>L'équipe Electro-Sign</p>
+    </div>
+</div>
+
+<div class="footer">
+    <p>Ce message a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+    <p>© 2025 Electro-Sign. Tous droits réservés.</p>
+    <p>
+        <a href="https://electro-sign.com/privacy" target="_blank">Politique de confidentialité</a> |
+        <a href="https://electro-sign.com/terms" target="_blank">Conditions d'utilisation</a>
+    </p>
+</div>
+</body>
+</html>

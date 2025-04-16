@@ -21,7 +21,19 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+      enabled: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: barhamadieng66@gmail.com
+    password: pqqi vmkb huvq thow
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 eureka:
   client:

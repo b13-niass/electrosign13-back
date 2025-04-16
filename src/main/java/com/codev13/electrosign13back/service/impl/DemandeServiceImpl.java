@@ -14,11 +14,15 @@ import com.codev13.electrosign13back.enums.StatusDemande;
 import com.codev13.electrosign13back.enums.TypeDocument;
 import com.codev13.electrosign13back.exception.demande.DemandeInternalServerException;
 import com.codev13.electrosign13back.exception.demande.DemandeNotFoundException;
+import com.codev13.electrosign13back.exception.demande.DemandeUnauthorizedException;
 import com.codev13.electrosign13back.exception.document.DocumentNotFoundException;
 import com.codev13.electrosign13back.exception.user.UserNotFoundException;
 import com.codev13.electrosign13back.service.DemandeService;
+import com.codev13.electrosign13back.service.MessageService;
 import com.codev13.electrosign13back.service.TokenProvider;
+import com.codev13.electrosign13back.utils.FIleManageUtil;
 import com.codev13.electrosign13back.web.dto.request.DemandeCreateRequestDto;
+import com.codev13.electrosign13back.web.dto.request.SignerDemandeRequestDto;
 import com.codev13.electrosign13back.web.dto.request.UserDemandeRequestDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseListDto;
@@ -26,9 +30,11 @@ import com.codev13.electrosign13back.web.dto.response.ParticipantDto;
 import com.codev13.electrosign13back.web.dto.response.UserInfoDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,6 +47,8 @@ public class DemandeServiceImpl implements DemandeService {
     private final UserRepository userRepository;
     private final FileStorageServiceManager fileStorageService;
     private final TokenProvider tokenProvider;
+    private final MessageService messageService;
+
     @Override
     @Transactional
     public DemandeResponseDto create(DemandeCreateRequestDto request) {
@@ -110,11 +118,11 @@ public class DemandeServiceImpl implements DemandeService {
                     }
                 }
                 // Save document
-                String absolutePath = fileStorageService.getActiveStorageService().uploadFile(request.file(), "signatures");
+                String absolutePath = fileStorageService.getActiveStorageService().uploadFile(request.file(), "nonsigner");
                 String currentStorage = fileStorageService.getCurrentStorageType();
                 byte[] docBytes = request.file().getBytes();
                 String docBase64 = Base64.getEncoder().encodeToString(docBytes);
-                documentRepository.save(Document.builder()
+                Document docSignature = documentRepository.save(Document.builder()
                                     .demande(demande)
                                     .linkCloud(currentStorage.equals("cloud") ? absolutePath: "" )
                                     .linkLocal(currentStorage.equals("local") ? absolutePath: "")
@@ -123,7 +131,37 @@ public class DemandeServiceImpl implements DemandeService {
                                     .etatDocument(EtatDocument.DISPONIBLE)
                                     .contenu(docBase64)
                                     .build());
-
+                if (request.approbateurs() != null) {
+                    for(UserDemandeRequestDto approbateur : request.approbateurs()){
+                        User user = userRepository.findById(approbateur.id()).orElseThrow(() -> new UserNotFoundException("Approbateur inexistant"));
+                        envoyerNotificationNouvelleDemande(
+                                user.getEmail(),
+                                user.getPrenom()+" "+user.getNom(),
+                                absolutePath,
+                                sender.getPrenom()+" "+sender.getNom()
+                                );
+                    }
+                }
+                for(UserDemandeRequestDto signataire : request.signataires()){
+                    User user = userRepository.findById(signataire.id()).orElseThrow(() -> new UserNotFoundException("Signataire inexistant"));
+                    envoyerNotificationNouvelleDemande(
+                            user.getEmail(),
+                            user.getPrenom()+" "+user.getNom(),
+                            docSignature.getNom(),
+                            sender.getPrenom()+" "+sender.getNom()
+                    );
+                }
+                if (request.ampliateurs() != null) {
+                    for (UserDemandeRequestDto ampliateur : request.ampliateurs()) {
+                        User user = userRepository.findById(ampliateur.id()).orElseThrow(() -> new UserNotFoundException("Ampliateur inexistant"));
+                        envoyerNotificationNouvelleDemande(
+                                user.getEmail(),
+                                user.getPrenom()+" "+user.getNom(),
+                                absolutePath,
+                                sender.getPrenom()+" "+sender.getNom()
+                        );
+                    }
+                }
                 if (request.fileAttachment() != null) {
                     for (MultipartFile file : request.fileAttachment()) {
                         absolutePath = fileStorageService.getActiveStorageService().uploadFile(file, "attachments");
@@ -197,16 +235,111 @@ public class DemandeServiceImpl implements DemandeService {
     }
 
     /**
+     * Signe une demande et passe au signataire suivant
+     */
+    @Transactional
+    public DemandeResponseListDto signerDemande(SignerDemandeRequestDto request) {
+        try {
+
+            User currentUser = userRepository.findByEmail(tokenProvider.getEmailFromToken()).orElseThrow(
+                    () -> new UserNotFoundException("Demandeur inexistant")
+            );
+            Demande demande = repository.findById(request.demandeId())
+                    .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+            System.out.println("OUI" + demande.getId());
+
+            Document document = documentRepository.findFirstByDemandeIdAndTypeAndActiveTrue(request.demandeId(), TypeDocument.SIGNATURE).orElseThrow(
+                    () -> new DocumentNotFoundException("Document non trouvé pour cette demande"));
+
+            DemandeSignature signature = demandeSignatureRepository.findByDemandeIdAndReceiverIdAndAction(
+                            request.demandeId(), currentUser.getId(), DemandeSignatureActions.SIGNER)
+                    .orElseThrow(() -> new DemandeUnauthorizedException("Vous n'êtes pas autorisé à signer cette demande"));
+
+            if (signature.getDetenant() != 1) {
+                throw new RuntimeException("Ce n'est pas votre tour de signer cette demande");
+            }
+
+
+            // Marquer la signature comme effectuée
+            signature.setDetenant(2); // 2 = signé
+            demandeSignatureRepository.save(signature);
+
+            // Mettre à jour le compteur de signature
+            demande.setCurrentSignature(demande.getCurrentSignature() + 1);
+
+            // Vérifier s'il y a un signataire suivant
+            if (demande.getCurrentSignature() < demande.getNombreSignature()) {
+                // Trouver le prochain signataire
+                List<DemandeSignature> signataires = demandeSignatureRepository.findByDemandeIdAndActionOrderByOrdre(
+                        request.demandeId(), DemandeSignatureActions.SIGNER);
+
+                Optional<DemandeSignature> prochainSignataire = signataires.stream()
+                        .filter(s -> s.getDetenant() == 0)
+                        .min(Comparator.comparing(DemandeSignature::getOrdre));
+
+                if (prochainSignataire.isPresent()) {
+                    prochainSignataire.get().setDetenant(1);
+                    demandeSignatureRepository.save(prochainSignataire.get());
+                    envoyerInvitationSignature(
+                            prochainSignataire.get().getReceiver().getEmail(),
+                            prochainSignataire.get().getReceiver().getPrenom() +" "+ prochainSignataire.get().getReceiver().getNom(),
+                            document.getNom(),
+                            prochainSignataire.get().getSender().getPrenom() +" "+ prochainSignataire.get().getSender().getNom()
+                    );
+                }
+            } else {
+                demande.setStatus(StatusDemande.SIGNEE);
+
+                if (demande.getNombreAmpliateur() > 0) {
+                    List<DemandeSignature> ampliateurs = demandeSignatureRepository.findByDemandeIdAndAction(
+                            request.demandeId(), DemandeSignatureActions.AMPLIER);
+
+                    for (DemandeSignature ampliateur : ampliateurs) {
+                        ampliateur.setDetenant(1);
+                        demandeSignatureRepository.save(ampliateur);
+                    }
+                }
+            }
+
+            repository.save(demande);
+            if (currentUser.getMySignature() == null && request.signature() != null) {
+                currentUser.setMySignature(request.signature());
+                userRepository.save(currentUser);
+            }
+
+            String absolutePath = fileStorageService.getActiveStorageService().uploadFile(request.file(), "signer");
+            String currentStorage = fileStorageService.getCurrentStorageType();
+            byte[] docBytes = request.file().getBytes();
+            String docBase64 = Base64.getEncoder().encodeToString(docBytes);
+
+            boolean isFileDelete = FIleManageUtil.deleteFile(document.getLinkLocal());
+
+            document.setContenu(docBase64);
+            document.setLinkCloud(currentStorage.equals("cloud") ? absolutePath: document.getLinkCloud() );
+            document.setLinkLocal(currentStorage.equals("local") ? absolutePath: document.getLinkLocal());
+
+            documentRepository.save(document);
+
+            return mapToDemandeResponseDto(demande, currentUser);
+        }catch (Exception e){
+            throw new DemandeInternalServerException(e.getMessage());
+        }
+    }
+
+
+    /**
      * Approuve une demande et passe au signataire suivant si tous les approbateurs ont approuvé
      */
     @Transactional
-    public void approuverDemande(Long demandeId, Long userId) {
+    public DemandeResponseListDto approuverDemande(Long demandeId) {
+        User currentUser = userRepository.findByEmail(tokenProvider.getEmailFromToken()).orElseThrow(
+                () -> new UserNotFoundException("Demandeur inexistant")
+        );
         Demande demande = repository.findById(demandeId)
                 .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
-
         // Vérifier que l'utilisateur est bien l'approbateur actuel
         DemandeSignature approbation = demandeSignatureRepository.findByDemandeIdAndReceiverIdAndAction(
-                        demandeId, userId, DemandeSignatureActions.APPROUVER)
+                        demandeId, currentUser.getId(), DemandeSignatureActions.APPROUVER)
                 .orElseThrow(() -> new RuntimeException("Vous n'êtes pas autorisé à approuver cette demande"));
 
         if (approbation.getDetenant() != 1) {
@@ -225,90 +358,60 @@ public class DemandeServiceImpl implements DemandeService {
             // Passer au premier signataire
             List<DemandeSignature> signataires = demandeSignatureRepository.findByDemandeIdAndActionOrderByOrdre(
                     demandeId, DemandeSignatureActions.SIGNER);
-
             if (!signataires.isEmpty()) {
                 DemandeSignature premierSignataire = signataires.get(0);
                 premierSignataire.setDetenant(1); // 1 = en attente de signature
                 demandeSignatureRepository.save(premierSignataire);
-
+                Document document = documentRepository.findFirstByDemandeIdAndTypeAndActiveTrue(premierSignataire.getDemande().getId(), TypeDocument.SIGNATURE).get();
+                envoyerInvitationSignature(
+                        premierSignataire.getReceiver().getEmail(),
+                        premierSignataire.getReceiver().getPrenom() +" "+ premierSignataire.getReceiver().getNom(),
+                        document.getNom(),
+                        premierSignataire.getSender().getPrenom() +" "+ premierSignataire.getSender().getNom()
+                );
                 // Mettre à jour le statut de la demande
                 demande.setStatus(StatusDemande.EN_ATTENTE_SIGNATURE);
             } else {
                 // Pas de signataires, la demande est considérée comme approuvée
                 demande.setStatus(StatusDemande.APPROUVEE);
             }
+        }else{
+            List<DemandeSignature> approbateurs = demandeSignatureRepository.findByDemandeIdAndActionOrderByOrdre(
+                    demandeId, DemandeSignatureActions.APPROUVER);
+            for (DemandeSignature ds: approbateurs) {
+               if (ds.getOrdre() == approbation.getOrdre()+1){
+                   ds.setDetenant(1);
+                   demandeSignatureRepository.save(ds);
+                   Document document = documentRepository.findFirstByDemandeIdAndTypeAndActiveTrue(ds.getDemande().getId(), TypeDocument.SIGNATURE).get();
+                   envoyerDemandeApprobation(
+                           ds.getReceiver().getEmail(),
+                           ds.getReceiver().getPrenom()+" "+ds.getReceiver().getNom(),
+                           document.getNom(),
+                           "Electro-Sign"
+                   );
+                   break;
+               }
+            };
         }
 
         repository.save(demande);
-    }
-
-    /**
-     * Signe une demande et passe au signataire suivant
-     */
-    @Transactional
-    public void signerDemande(Long demandeId, Long userId) {
-        Demande demande = repository.findById(demandeId)
-                .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
-
-        // Vérifier que l'utilisateur est bien le signataire actuel
-        DemandeSignature signature = demandeSignatureRepository.findByDemandeIdAndReceiverIdAndAction(
-                        demandeId, userId, DemandeSignatureActions.SIGNER)
-                .orElseThrow(() -> new RuntimeException("Vous n'êtes pas autorisé à signer cette demande"));
-
-        if (signature.getDetenant() != 1) {
-            throw new RuntimeException("Ce n'est pas votre tour de signer cette demande");
-        }
-
-        // Marquer la signature comme effectuée
-        signature.setDetenant(2); // 2 = signé
-        demandeSignatureRepository.save(signature);
-
-        // Mettre à jour le compteur de signature
-        demande.setCurrentSignature(demande.getCurrentSignature() + 1);
-
-        // Vérifier s'il y a un signataire suivant
-        if (demande.getCurrentSignature() < demande.getNombreSignature()) {
-            // Trouver le prochain signataire
-            List<DemandeSignature> signataires = demandeSignatureRepository.findByDemandeIdAndActionOrderByOrdre(
-                    demandeId, DemandeSignatureActions.SIGNER);
-
-            Optional<DemandeSignature> prochainSignataire = signataires.stream()
-                    .filter(s -> s.getDetenant() == 0) // 0 = pas encore signé
-                    .min(Comparator.comparing(DemandeSignature::getOrdre));
-
-            if (prochainSignataire.isPresent()) {
-                prochainSignataire.get().setDetenant(1); // 1 = en attente de signature
-                demandeSignatureRepository.save(prochainSignataire.get());
-            }
-        } else {
-            // Tous les signataires ont signé, la demande est signée
-            demande.setStatus(StatusDemande.SIGNEE);
-
-            // Notifier les ampliateurs si nécessaire
-            if (demande.getNombreAmpliateur() > 0) {
-                List<DemandeSignature> ampliateurs = demandeSignatureRepository.findByDemandeIdAndAction(
-                        demandeId, DemandeSignatureActions.AMPLIER);
-
-                for (DemandeSignature ampliateur : ampliateurs) {
-                    ampliateur.setDetenant(1); // 1 = en attente d'ampliation
-                    demandeSignatureRepository.save(ampliateur);
-                }
-            }
-        }
-
-        repository.save(demande);
+        return mapToDemandeResponseDto(demande, currentUser);
     }
 
     /**
      * Refuse une demande (approbateur ou signataire)
      */
+
     @Transactional
-    public void refuserDemande(Long demandeId, Long userId, String motif) {
+    public DemandeResponseListDto rejeterDemande(Long demandeId) {
+        User currentUser = userRepository.findByEmail(tokenProvider.getEmailFromToken()).orElseThrow(
+                () -> new UserNotFoundException("Demandeur inexistant")
+        );
         Demande demande = repository.findById(demandeId)
                 .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
 
         // Vérifier que l'utilisateur est bien un approbateur ou signataire actuel
-        DemandeSignature participation = demandeSignatureRepository.findByDemandeIdAndReceiverId(demandeId, userId)
+        DemandeSignature participation = demandeSignatureRepository.findByDemandeIdAndReceiverId(demandeId, currentUser.getId())
                 .orElseThrow(() -> new RuntimeException("Vous n'êtes pas associé à cette demande"));
 
         if (participation.getDetenant() != 1) {
@@ -318,9 +421,7 @@ public class DemandeServiceImpl implements DemandeService {
         // Marquer la demande comme refusée
         demande.setStatus(StatusDemande.REFUSEE);
         repository.save(demande);
-
-        // Enregistrer le motif de refus (à implémenter selon votre modèle de données)
-        // ...
+        return mapToDemandeResponseDto(demande, currentUser);
     }
 
     @Override
@@ -476,4 +577,63 @@ public class DemandeServiceImpl implements DemandeService {
                 .build();
     }
 
+    // Exemple 1: Nouvelle demande de signature
+    public void envoyerNotificationNouvelleDemande(String email, String nomDestinataire, String documentName, String senderName) {
+        Map<String, Object> messageData = new HashMap<>();
+        messageData.put("salutation", "Bonjour " + nomDestinataire + ",");
+        messageData.put("documentName", documentName);
+        messageData.put("senderName", senderName);
+        messageData.put("sendDate", new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+        messageData.put("dueDate", new SimpleDateFormat("dd/MM/yyyy").format(
+                new Date(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000))); // +7 jours
+        messageData.put("actionUrl", "http://localhost:5173/demandes");
+        messageData.put("expirationTime", "48 heures");
+        messageData.put("logoExists", true);
+
+        try {
+            messageService.sendMailWithThymeleaf(email, "nouvelle_demande", messageData);
+        } catch (Exception e) {
+            // Gérer l'exception
+        }
+    }
+
+    // Exemple 2: Demande d'approbation
+    public void envoyerDemandeApprobation(String email, String nomDestinataire, String documentName, String senderName) {
+        Map<String, Object> messageData = new HashMap<>();
+        messageData.put("salutation", "Bonjour " + nomDestinataire + ",");
+        messageData.put("documentName", documentName);
+        messageData.put("senderName", senderName);
+        messageData.put("sendDate", new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+        messageData.put("dueDate", new SimpleDateFormat("dd/MM/yyyy").format(
+                new Date(System.currentTimeMillis() + 5 * 24 * 60 * 60 * 1000))); // +5 jours
+        messageData.put("actionUrl", "http://localhost:5173/demandes");
+        messageData.put("expirationTime", "72 heures");
+        messageData.put("logoExists", true);
+
+        try {
+            messageService.sendMailWithThymeleaf(email, "approbation", messageData);
+        } catch (Exception e) {
+            // Gérer l'exception
+        }
+    }
+
+    // Exemple 3: Invitation à signer
+    public void envoyerInvitationSignature(String email, String nomDestinataire, String documentName, String senderName) {
+        Map<String, Object> messageData = new HashMap<>();
+        messageData.put("salutation", "Bonjour " + nomDestinataire + ",");
+        messageData.put("documentName", documentName);
+        messageData.put("senderName", senderName);
+        messageData.put("sendDate", new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+        messageData.put("dueDate", new SimpleDateFormat("dd/MM/yyyy").format(
+                new Date(System.currentTimeMillis() + 3 * 24 * 60 * 60 * 1000))); // +3 jours
+        messageData.put("actionUrl", "http://localhost:5173/demandes");
+        messageData.put("expirationTime", "24 heures");
+        messageData.put("logoExists", true);
+
+        try {
+            messageService.sendMailWithThymeleaf(email, "signature", messageData);
+        } catch (Exception e) {
+            // Gérer l'exception
+        }
+    }
 }

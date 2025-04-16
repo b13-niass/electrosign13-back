@@ -3,6 +3,7 @@ package com.codev13.electrosign13back.data.entity;
 import com.core.communs.core.GenericEntity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+//@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Table(name = "fonctions")
 public class Fonction extends AbstractEntity implements GenericEntity<Fonction> {
 
@@ -23,6 +24,7 @@ public class Fonction extends AbstractEntity implements GenericEntity<Fonction> 
     @Column(unique = true, nullable = false)
     private String acronyme;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "fonction")
     private List<User> users;
 

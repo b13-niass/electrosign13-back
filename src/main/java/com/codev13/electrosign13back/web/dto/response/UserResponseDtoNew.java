@@ -12,7 +12,7 @@ import java.util.Set;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserResponseDto {
+public class UserResponseDtoNew {
     private Long id;
     private String prenom;
     private String nom;
@@ -22,7 +22,6 @@ public class UserResponseDto {
     private String publicKey;
     private String mySignature;
     private Fonction fonction;
-    private Set<Role> roles;
-    private List<String> rolesLibelle;
+    private List<RoleResponseDtoNew> roles;
     private boolean active;
 }

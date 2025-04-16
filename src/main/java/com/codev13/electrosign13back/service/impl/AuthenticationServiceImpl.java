@@ -33,7 +33,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public LoginResponseDto authUser(LoginRequestDto request) {
-        User user = userRepository.findByEmail(request.email()).orElseThrow(
+        User user = userRepository.findByEmailAndActive(request.email(), true).orElseThrow(
                 () -> new UserNotFoundException(request.email())
         );
         KeycloakAuthRequest keycloakAuthRequest = KeycloakAuthRequest.builder()

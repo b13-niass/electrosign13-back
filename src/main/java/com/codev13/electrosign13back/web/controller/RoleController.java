@@ -9,8 +9,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
+
 public interface RoleController {
     ResponseEntity<RoleResponseDto> createRole(@RequestBody @Valid RoleRequestDto request);
     ResponseEntity<RoleResponseDto> updateRole(@RequestBody @Valid RoleUpdateRequestDto request);
     ResponseEntity<DeletedResponseDto> deleteRole(@RequestBody RoleDeleteRequestDto request);
+    ResponseEntity<List<RoleResponseDto>> getAllRole();
+
 }

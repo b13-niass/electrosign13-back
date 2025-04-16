@@ -35,7 +35,7 @@ public class User extends AbstractEntity implements GenericEntity<User> {
     private String privateKey;
     @Column(columnDefinition = "TEXT")
     private String publicKey;
-    @Column(nullable = true)
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String mySignature;
 
     @ManyToOne

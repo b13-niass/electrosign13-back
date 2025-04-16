@@ -9,18 +9,19 @@ import com.codev13.electrosign13back.data.repository.RoleRepository;
 import com.codev13.electrosign13back.data.repository.UserRepository;
 import com.codev13.electrosign13back.exception.fonction.FonctionNotFoundException;
 import com.codev13.electrosign13back.exception.role.RoleNotFoundException;
+import com.codev13.electrosign13back.exception.user.UserNotFoundException;
 import com.codev13.electrosign13back.service.FileStorageService;
 import com.codev13.electrosign13back.service.TokenProvider;
 import com.codev13.electrosign13back.service.UserService;
 import com.codev13.electrosign13back.utils.AESUtil;
 import com.codev13.electrosign13back.utils.KeyGeneratorUtil;
 import com.codev13.electrosign13back.web.dto.request.UserRequestDto;
-import com.codev13.electrosign13back.web.dto.response.UserLoginResponseDto;
-import com.codev13.electrosign13back.web.dto.response.UserResponseDto;
+import com.codev13.electrosign13back.web.dto.response.*;
 import com.core.communs.service.MapperService;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponseDto createUser(UserRequestDto request) {
         try {
+            System.out.println(request.roles().stream().toList());
             Set<Role> roles = request.roles().stream()
                     .map(roleName -> roleRepository.findRoleByLibelle(roleName)
                             .orElseThrow(() -> new RoleNotFoundException("Role " + roleName + " non trouvé")))
@@ -69,9 +71,7 @@ public class UserServiceImpl implements UserService {
                     () -> new FonctionNotFoundException("Fonction non trouvée avec l'id " + request.fonctionId())
             );
             KeyPair keyPair = KeyGeneratorUtil.getKeyPair();
-            //Chiffrer la clé privée avec AES
             String encryptedPrivateKey = AESUtil.encrypt(SECRET, keyPair.getPrivate().getEncoded());
-//            String fileName = fileStorageService.uploadFile(request.photo());
             byte[] fileBytes = request.photo().getBytes();
             String fileBase64 = "data:image/png;base64,"+Base64.getEncoder().encodeToString(fileBytes);
             User user = User.builder()
@@ -120,6 +120,7 @@ public class UserServiceImpl implements UserService {
             String status) {
 
         List<User> users = userRepository.findAll();
+
         if (roles != null){
             users = users.stream().filter(user -> user.getRoles().stream().anyMatch(role -> role.getLibelle().equals(roles)))
                    .toList();
@@ -128,8 +129,43 @@ public class UserServiceImpl implements UserService {
             users = users.stream().filter(user -> !user.isActive())
                    .toList();
         }
-
         return MapperService.mapToListEntity(users, UserResponseDto.class);
     }
 
+    public List<UserResponseDtoNew> getUsers(){
+        List<User> users = userRepository.findAllWithRoles();
+        return users.stream()
+                .map(user -> {
+                    UserResponseDtoNew dto = new UserResponseDtoNew();
+                    BeanUtils.copyProperties(user, dto);
+                    dto.setFonction(user.getFonction());
+                    dto.setRoles(user.getRoles().stream()
+                            .map(role -> {
+                                RoleResponseDtoNew roleDTO = new RoleResponseDtoNew();
+                                roleDTO.setId(role.getId());
+                                roleDTO.setLibelle(role.getLibelle());
+                                return roleDTO;
+                            })
+                            .collect(Collectors.toList()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public DeletedResponseDto activerUser(Long idUser){
+        User user = userRepository.findById(idUser).orElseThrow(
+                () -> new UserNotFoundException("l'utilisateur n'existe pas")
+        );
+        user.setActive(true);
+        userRepository.save(user);
+        return DeletedResponseDto.builder().message("Utilisateur Activer").build();
+    }
+    public DeletedResponseDto desactiverUser(Long idUser){
+        User user = userRepository.findById(idUser).orElseThrow(
+                () -> new UserNotFoundException("l'utilisateur n'existe pas")
+        );
+        user.setActive(false);
+        userRepository.save(user);
+        return DeletedResponseDto.builder().message("Utilisateur Activer").build();
+    }
 }

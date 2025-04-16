@@ -15,6 +15,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/private/roles")
 public class RoleControllerImpl extends GenericController<Role, RoleResponseDto, RoleRequestDto> implements RoleController {
@@ -41,5 +43,11 @@ public class RoleControllerImpl extends GenericController<Role, RoleResponseDto,
     @Override
     public ResponseEntity<DeletedResponseDto> deleteRole(@RequestBody @Valid RoleDeleteRequestDto request) {
         return ResponseEntity.ok(service.deleteRole(request));
+    }
+
+    @Override
+    @GetMapping("/all")
+    public ResponseEntity<List<RoleResponseDto>> getAllRole() {
+        return ResponseEntity.ok(service.getAllRole());
     }
 }

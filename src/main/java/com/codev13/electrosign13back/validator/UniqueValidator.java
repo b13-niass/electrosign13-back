@@ -38,10 +38,10 @@ public class UniqueValidator implements ConstraintValidator<Unique, Object> {
             packageName = packageName.substring(0, packageName.lastIndexOf(".")) + ".repository";
             Class<?> repositoryClass = Class.forName(packageName + "." + repositoryName);
             JpaRepository<?, ?> repository = (JpaRepository<?, ?>) applicationContext.getBean(repositoryClass);
-            System.out.println("ICI3");
+//            System.out.println("ICI3");
             String methodName = "existsBy" + field.substring(0, 1).toUpperCase() + field.substring(1);
             Method existsMethod = repositoryClass.getMethod(methodName, value.getClass());
-            System.out.println("ICI 3");
+//            System.out.println("ICI 3");
             return !(Boolean) existsMethod.invoke(repository, value);
 
         } catch (Exception e) {

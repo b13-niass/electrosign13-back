@@ -5,9 +5,7 @@ import com.codev13.electrosign13back.data.repository.UserRepository;
 import com.codev13.electrosign13back.service.UserService;
 import com.codev13.electrosign13back.web.controller.UserController;
 import com.codev13.electrosign13back.web.dto.request.UserRequestDto;
-import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
-import com.codev13.electrosign13back.web.dto.response.UserLoginResponseDto;
-import com.codev13.electrosign13back.web.dto.response.UserResponseDto;
+import com.codev13.electrosign13back.web.dto.response.*;
 import com.core.communs.core.GenericController;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -37,5 +35,22 @@ public class UserControllerImpl extends GenericController<User, UserResponseDto,
             @RequestParam(name = "roles", required = false) String roles,
             @RequestParam(name = "status", required = false) String status) {
         return ResponseEntity.ok(service.getAllUsers(roles, status));
+    }
+
+    @Override
+    @GetMapping("/allUsers")
+    public ResponseEntity<List<UserResponseDtoNew>> getUsers() {
+        return ResponseEntity.ok(service.getUsers());
+    }
+
+    @GetMapping("/activerUser/{id}")
+    @Override
+    public ResponseEntity<DeletedResponseDto> activerUser(@PathVariable Long id) {
+       return ResponseEntity.ok(service.activerUser(id));
+    }
+    @GetMapping("/desactiverUser/{id}")
+    @Override
+    public ResponseEntity<DeletedResponseDto> desactiverUser(@PathVariable Long id) {
+        return ResponseEntity.ok(service.desactiverUser(id));
     }
 }

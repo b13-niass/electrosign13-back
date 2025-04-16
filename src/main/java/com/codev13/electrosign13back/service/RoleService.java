@@ -6,8 +6,11 @@ import com.codev13.electrosign13back.web.dto.request.role.RoleUpdateRequestDto;
 import com.codev13.electrosign13back.web.dto.response.DeletedResponseDto;
 import com.codev13.electrosign13back.web.dto.response.RoleResponseDto;
 
+import java.util.List;
+
 public interface RoleService {
     RoleResponseDto createRole(RoleRequestDto request);
     RoleResponseDto updateRole(RoleUpdateRequestDto request);
     DeletedResponseDto deleteRole(RoleDeleteRequestDto request);
+    List<RoleResponseDto> getAllRole();
 }

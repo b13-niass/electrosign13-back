@@ -8,6 +8,7 @@ import com.codev13.electrosign13back.service.DemandeService;
 import com.codev13.electrosign13back.web.controller.DemandeController;
 import com.codev13.electrosign13back.web.dto.request.DemandeCreateRequestDto;
 import com.codev13.electrosign13back.web.dto.request.DemandeRequestDto;
+import com.codev13.electrosign13back.web.dto.request.SignerDemandeRequestDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseListDto;
 import com.codev13.electrosign13back.web.dto.response.DocumentBase64Dto;
@@ -51,6 +52,12 @@ public class DemandeControllerImpl extends GenericController<Demande, DemandeRes
         return ResponseEntity.ok(service.getDemandesRecues());
     }
 
+    @PostMapping(path = "/signer", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @Override
+    public ResponseEntity<DemandeResponseListDto> signerDemande(@ModelAttribute @Valid SignerDemandeRequestDto request) {
+        return ResponseEntity.ok(service.signerDemande(request));
+    }
+
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboardData() {
         List<DemandeResponseListDto> envoyees = service.getDemandesEnvoyees();
@@ -69,6 +76,17 @@ public class DemandeControllerImpl extends GenericController<Demande, DemandeRes
     @GetMapping("/{id}")
     public ResponseEntity<DemandeResponseListDto> getDemandeById(@PathVariable Long id) {
         DemandeResponseListDto demande = service.getDemandeById(id);
+        return ResponseEntity.ok(demande);
+    }
+
+    @GetMapping("/{id}/approuver")
+    public ResponseEntity<DemandeResponseListDto> approuverDemande(@PathVariable Long id) {
+        DemandeResponseListDto demande = service.approuverDemande(id);
+        return ResponseEntity.ok(demande);
+    }
+    @GetMapping("/{id}/rejeter")
+    public ResponseEntity<DemandeResponseListDto> rejeterDemande(@PathVariable Long id) {
+        DemandeResponseListDto demande = service.rejeterDemande(id);
         return ResponseEntity.ok(demande);
     }
 
