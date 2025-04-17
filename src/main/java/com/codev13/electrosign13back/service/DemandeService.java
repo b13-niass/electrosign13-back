@@ -4,6 +4,8 @@ import com.codev13.electrosign13back.data.entity.Document;
 import com.codev13.electrosign13back.enums.TypeDocument;
 import com.codev13.electrosign13back.web.dto.request.DemandeCreateRequestDto;
 import com.codev13.electrosign13back.web.dto.request.SignerDemandeRequestDto;
+import com.codev13.electrosign13back.web.dto.response.ArchiveResultDto;
+import com.codev13.electrosign13back.web.dto.response.ArchiveStatsDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseListDto;
 import org.springframework.http.ResponseEntity;
@@ -20,4 +22,7 @@ public interface DemandeService {
     DemandeResponseListDto signerDemande(SignerDemandeRequestDto request);
     DemandeResponseListDto approuverDemande(@PathVariable Long id);
     DemandeResponseListDto rejeterDemande(@PathVariable Long id);
+
+    ArchiveResultDto archiveDocuments();
+    ArchiveStatsDto getArchiveStats();
 }

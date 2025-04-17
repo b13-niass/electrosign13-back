@@ -1,5 +1,7 @@
 package com.codev13.electrosign13back.service.impl;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.codev13.electrosign13back.data.entity.Demande;
 import com.codev13.electrosign13back.data.entity.DemandeSignature;
 import com.codev13.electrosign13back.data.entity.Document;
@@ -24,22 +26,23 @@ import com.codev13.electrosign13back.utils.FIleManageUtil;
 import com.codev13.electrosign13back.web.dto.request.DemandeCreateRequestDto;
 import com.codev13.electrosign13back.web.dto.request.SignerDemandeRequestDto;
 import com.codev13.electrosign13back.web.dto.request.UserDemandeRequestDto;
-import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
-import com.codev13.electrosign13back.web.dto.response.DemandeResponseListDto;
-import com.codev13.electrosign13back.web.dto.response.ParticipantDto;
-import com.codev13.electrosign13back.web.dto.response.UserInfoDto;
+import com.codev13.electrosign13back.web.dto.response.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DemandeServiceImpl implements DemandeService {
     private final DemandeRepository repository;
     private final DemandeSignatureRepository demandeSignatureRepository;
@@ -48,6 +51,9 @@ public class DemandeServiceImpl implements DemandeService {
     private final FileStorageServiceManager fileStorageService;
     private final TokenProvider tokenProvider;
     private final MessageService messageService;
+    @Value("${storage.local.path}")
+    private String localPath;
+    private final Cloudinary cloudinary;
 
     @Override
     @Transactional
@@ -422,6 +428,95 @@ public class DemandeServiceImpl implements DemandeService {
         demande.setStatus(StatusDemande.REFUSEE);
         repository.save(demande);
         return mapToDemandeResponseDto(demande, currentUser);
+    }
+
+    /**
+     * Archive les documents des demandes signées vers Cloudinary
+     * @return ArchiveResultDto contenant les résultats de l'archivage
+     */
+    @Transactional
+    public ArchiveResultDto archiveDocuments () {
+        log.info("Début du processus d'archivage des documents signés");
+
+        // Récupérer toutes les demandes avec le statut SIGNEE
+        List<Demande> signedDemandes = repository.findByStatus(StatusDemande.SIGNEE);
+
+        List<Document> documentsToArchive = signedDemandes.stream()
+                .flatMap(demande -> demande.getDocuments().stream())
+                .filter(document -> document.getEtatDocument() != EtatDocument.ARCHIVE)
+                .collect(Collectors.toList());
+
+        log.info("Nombre de documents à archiver : {}", documentsToArchive.size());
+
+        List<String> successfullyArchived = new ArrayList<>();
+        List<String> failedToArchive = new ArrayList<>();
+
+        for (Document document : documentsToArchive) {
+            try {
+                // Construire le chemin complet du fichier
+                String filePath = localPath + File.separator + document.getLinkLocal();
+                File documentFile = new File(filePath);
+
+                if (!documentFile.exists()) {
+                    log.error("Le fichier n'existe pas : {}", filePath);
+                    failedToArchive.add(document.getNom());
+                    continue;
+                }
+
+                // Upload vers Cloudinary
+                Map uploadResult = cloudinary.uploader().upload(documentFile, ObjectUtils.emptyMap());
+                String cloudUrl = (String) uploadResult.get("secure_url");
+
+                // Mettre à jour le document
+                document.setLinkCloud(cloudUrl);
+                document.setEtatDocument(EtatDocument.ARCHIVE);
+                documentRepository.save(document);
+
+                successfullyArchived.add(document.getNom());
+                log.info("Document archivé avec succès : {}", document.getNom());
+            } catch (IOException e) {
+                log.error("Erreur lors de l'archivage du document : {}", document.getNom(), e);
+                failedToArchive.add(document.getNom());
+            }
+        }
+
+        // Créer et retourner le DTO de résultat
+        ArchiveResultDto result = new ArchiveResultDto();
+        result.setTotalDocuments(documentsToArchive.size());
+        result.setSuccessfullyArchived(successfullyArchived);
+        result.setFailedToArchive(failedToArchive);
+
+        log.info("Fin du processus d'archivage. Documents archivés : {}, Échecs : {}",
+                successfullyArchived.size(), failedToArchive.size());
+
+        return result;
+    }
+
+    /**
+     * Récupère les statistiques d'archivage
+     * @return ArchiveStatsDto contenant les statistiques
+     */
+    public ArchiveStatsDto getArchiveStats() {
+        log.info("Récupération des statistiques d'archivage");
+
+        // Compter les documents signés (dans les demandes avec statut SIGNEE)
+        List<Demande> signedDemandes = repository.findByStatus(StatusDemande.SIGNEE);
+        int signedDocumentsCount = signedDemandes.stream()
+                .flatMap(demande -> demande.getDocuments().stream())
+                .filter(document -> document.getEtatDocument() != EtatDocument.ARCHIVE)
+                .collect(Collectors.toList())
+                .size();
+
+        // Compter les documents archivés
+        int archivedDocumentsCount = documentRepository.countByEtatDocument(EtatDocument.ARCHIVE);
+
+        log.info("Statistiques d'archivage - Documents signés : {}, Documents archivés : {}",
+                signedDocumentsCount, archivedDocumentsCount);
+
+        return ArchiveStatsDto.builder()
+                .signedDocuments(signedDocumentsCount)
+                .archivedDocuments(archivedDocumentsCount)
+                .build();
     }
 
     @Override

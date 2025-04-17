@@ -55,8 +55,14 @@ storage:
   local:
     path: src/main/resources/uploads/ # Chemin local où enregistrer les fichiers
   cloud:
-    provider: s3 # Exemple : s3, firebase, autre
+    provider: cloudinary # Exemple : s3, firebase, autre
     bucket: my-cloud-bucket
+
+# Configuration de Cloudinary
+cloudinary:
+  cloud-name: dbq7ldlyx
+  api-key: 354527131793645
+  api-secret: 1e7NFIZsu3DQ8bHkamyehf0CuQU
 
 keycloak:
   realm: electrosign
@@ -67,3 +73,6 @@ keycloak:
   client-secret: WFNhWhii6mt1rf4Xu8o5Nj4Gm4E4GNYf
 
 keySecret: 34f66de4119f4933b0b22b5b4c997c53
+
+app:
+  base-url: http://localhost:8200

@@ -2,6 +2,8 @@ package com.codev13.electrosign13back.web.controller;
 
 import com.codev13.electrosign13back.web.dto.request.DemandeCreateRequestDto;
 import com.codev13.electrosign13back.web.dto.request.SignerDemandeRequestDto;
+import com.codev13.electrosign13back.web.dto.response.ArchiveResultDto;
+import com.codev13.electrosign13back.web.dto.response.ArchiveStatsDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
 import com.codev13.electrosign13back.web.dto.response.DemandeResponseListDto;
 import jakarta.validation.Valid;
@@ -21,4 +23,6 @@ public interface DemandeController {
     ResponseEntity<DemandeResponseListDto> signerDemande(SignerDemandeRequestDto request);
     ResponseEntity<DemandeResponseListDto> approuverDemande(@PathVariable Long id);
     ResponseEntity<DemandeResponseListDto> rejeterDemande(@PathVariable Long id);
+    ResponseEntity<ArchiveResultDto> archiveDocuments();
+    ResponseEntity<ArchiveStatsDto> getArchiveStats();
 }

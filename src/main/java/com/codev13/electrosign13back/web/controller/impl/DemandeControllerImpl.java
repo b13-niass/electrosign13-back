@@ -9,9 +9,7 @@ import com.codev13.electrosign13back.web.controller.DemandeController;
 import com.codev13.electrosign13back.web.dto.request.DemandeCreateRequestDto;
 import com.codev13.electrosign13back.web.dto.request.DemandeRequestDto;
 import com.codev13.electrosign13back.web.dto.request.SignerDemandeRequestDto;
-import com.codev13.electrosign13back.web.dto.response.DemandeResponseDto;
-import com.codev13.electrosign13back.web.dto.response.DemandeResponseListDto;
-import com.codev13.electrosign13back.web.dto.response.DocumentBase64Dto;
+import com.codev13.electrosign13back.web.dto.response.*;
 import com.core.communs.core.GenericController;
 import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
@@ -142,5 +140,17 @@ public class DemandeControllerImpl extends GenericController<Demande, DemandeRes
 //        }
 
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/archiveDocuments")
+    public ResponseEntity<ArchiveResultDto> archiveDocuments() {
+        ArchiveResultDto result = service.archiveDocuments();
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/getArchiveStats")
+    public ResponseEntity<ArchiveStatsDto> getArchiveStats() {
+        ArchiveStatsDto stats = service.getArchiveStats();
+        return ResponseEntity.ok(stats);
     }
 }
