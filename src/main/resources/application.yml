@@ -3,9 +3,9 @@ spring:
     name: electrosign13-back
     version: v1.0.0
   datasource:
-    url: jdbc:postgresql://localhost:8126/electrosign
-    username: amigoscode
-    password: password
+    url: jdbc:postgresql://ep-floral-waterfall-a4xzy40t-pooler.us-east-1.aws.neon.tech/electrosign
+    username: electrosign_owner
+    password: npg_LEkiCxHp7V8O
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -16,7 +16,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8090/realms/electrosign
+          issuer-uri: https://keycloak-app.onrender.com/realms/electrosign
   servlet:
     multipart:
       max-file-size: 10MB
@@ -66,7 +66,7 @@ cloudinary:
 
 keycloak:
   realm: electrosign
-  auth-server-url: http://localhost:8090
+  auth-server-url: https://keycloak-app.onrender.com
   use-resource-role-mappings: true
   bearer-only: true
   client-id: electrosign-client
